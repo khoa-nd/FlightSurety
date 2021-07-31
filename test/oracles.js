@@ -36,7 +36,7 @@ contract('Oracles', async (accounts) => {
 
         // ARRANGE
         let flight = 'ND1309'; // Course number
-        let timestamp = Math.floor(Date.now() / 1000);
+        let timestamp = 1627747030;
 
         // Submit a request for oracles to get status information for a flight
         await config.flightSuretyApp.fetchFlightStatus(config.firstAirline, flight, timestamp);
