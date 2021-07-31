@@ -15,6 +15,7 @@
   },
   "author": "Nik Kalyani <nik@kalyani.com> https://www.kalyani.com",
   "devDependencies": {
+    "gulp": "^4.0.0",
     "@babel/cli": "^7.0.0-beta.46",
     "@babel/core": "^7.0.0-beta.46",
     "@babel/plugin-proposal-class-properties": "^7.0.0-beta.46",
@@ -37,7 +38,7 @@
     "superstatic": "6.0.3",
     "truffle": "5.0.2",
     "truffle-hdwallet-provider": "1.0.2",
-    "web3": "1.0.0-beta.37",
+    "web3": "1.2.1",
     "webpack": "^4.6.0",
     "webpack-cli": "^3.1.2",
     "webpack-dev-server": "3.1.14",
