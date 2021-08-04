@@ -13,7 +13,9 @@ contract FlightSuretyData {
     bool private operational = true;
     uint256 private authorizedAirlineCount = 0;
     uint256 private changeOperatingStatusVotes = 0;
+    uint256 private insuranceBalance = 0;
     uint256 private MAX_NO_OF_AIRLINES = 4;
+    uint256 private MAX_FUND_LIMIT = 10 ether;
 
     struct Airline {
         string name;
@@ -23,13 +25,24 @@ contract FlightSuretyData {
         bool operationalVote;
     }
 
+    struct Insuree{
+        address account;
+        uint256 insuranceAmount;
+        uint256 payoutBalance;
+    }
+
     mapping(address => Airline) airlines;
+    mapping(address => Insuree)private insurees;
 
 
     /********************************************************************************************/
     /*                                       EVENT DEFINITIONS                                  */
     /********************************************************************************************/
     event RegisteredAirline(address airline);
+    event AuthorizedAirline(address airline);
+    event BoughtInsurence(address caller, bytes32 key, uint256 amount);
+    event CreditInsuree(address airline, address insuree, uint256 amount);
+    event PayInsuree(address airline, address insuree, uint256 amount);
 
     /**
     * @dev Constructor
@@ -161,24 +174,32 @@ contract FlightSuretyData {
      * @dev Buy insurance for a flight
      *
      */
-    function buy
-    (
-    )
-    external
-    payable
+    function buy(address airline, address insuree, string flight, uint256 timeStamp, uint256 amount) external payable
+    requireIsOperational
     {
+        require(insurees[insuree].account == insuree,"need to provide insuree account address");
+        require(msg.sender == insuree, "insuree calls this function");
+        require(amount == msg.value,"amount must equal value sent");
 
+        bytes32 key = getFlightKey(airline, flight, timeStamp);
+        airline.transfer(amount);
+        insurees[insuree].insuranceAmount += amount;
+        insuranceBalance += amount;
+
+        emit BoughtInsurence(msg.sender, key, amount);
     }
 
     /**
      *  @dev Credits payouts to insurees
     */
-    function creditInsurees
-    (
-    )
+    function creditInsurees(address airline, address insuree, uint256 creditAmount)
+    requireIsOperational
     external
-    pure
     {
+        require(insurees[insuree].insuranceAmount >= creditAmount);
+
+        insurees[insuree].payoutBalance = creditAmount;
+        emit CreditInsuree(airline,insuree,creditAmount);
     }
 
 
@@ -186,12 +207,12 @@ contract FlightSuretyData {
      *  @dev Transfers eligible payout funds to insuree
      *
     */
-    function pay
-    (
-    )
-    external
-    pure
+    function pay(address airline, address insuree, uint256 payoutAmount) external
+    requireIsOperational
     {
+        require(msg.sender == airline);
+        insurees[insuree].account.transfer(payoutAmount);
+        emit PayInsuree(airline, insuree, payoutAmount);
     }
 
     /**
@@ -199,23 +220,24 @@ contract FlightSuretyData {
      *      resulting in insurance payouts, the contract should be self-sustaining
      *
      */
-    function fund
-    (
-    )
-    public
-    payable
+    function fund(address airline) public payable
+    requireIsOperational
     {
+        require(msg.value >= MAX_FUND_LIMIT, "Insufficient funds");
+        require(airlines[airline].isRegistered, "Sending account must be registered before it can be funded");
+
+
+        uint256 totalAmount = totalAmount.add(msg.value);
+        airline.transfer(msg.value); //their code has the totalAmount being transferred to the contract account. Why?
+
+        if (!airlines[airline].isAuthorized) {
+            airlines[airline].isAuthorized = true;
+            authorizedAirlineCount = authorizedAirlineCount.add(1);
+            emit AuthorizedAirline(airline);
+        }
     }
 
-    function getFlightKey
-    (
-        address airline,
-        string memory flight,
-        uint256 timestamp
-    )
-    pure
-    internal
-    returns (bytes32)
+    function getFlightKey(address airline, string memory flight, uint256 timestamp) pure internal returns (bytes32)
     {
         return keccak256(abi.encodePacked(airline, flight, timestamp));
     }
@@ -228,7 +250,7 @@ contract FlightSuretyData {
     external
     payable
     {
-        fund();
+        fund(msg.sender);
     }
 
 }
